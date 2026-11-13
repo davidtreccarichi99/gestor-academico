@@ -135,7 +135,8 @@
       frame.classList.remove("hidden");
     }
 
-    if (localStorage.getItem(STORAGE_KEY) === PIN_HASH_ESPERADO) {
+    // Cambia localStorage por sessionStorage en ambas líneas:
+    if (sessionStorage.getItem(STORAGE_KEY) === PIN_HASH_ESPERADO) {
       cargarAplicacion();
     }
 
@@ -147,7 +148,7 @@
 
       const hashIngresado = await calcularSHA256(pinIngresado);
       if (hashIngresado === PIN_HASH_ESPERADO) {
-        localStorage.setItem(STORAGE_KEY, hashIngresado);
+        sessionStorage.setItem(STORAGE_KEY, hashIngresado);
         cargarAplicacion();
       } else {
         errorDiv.textContent = "PIN incorrecto. Intenta nuevamente.";
