@@ -112,8 +112,7 @@
   <iframe id="appFrame" class="hidden" allow="clipboard-read; clipboard-write"></iframe>
 
   <script>
-    // PIN por defecto: "1234" (en SHA-256 para que no se lea en el código fuente)
-    const PIN_HASH_ESPERADO = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+    const PIN_HASH_ESPERADO = "c7f4f146491d27eed1cd4d422c9b3fec37006c606b17dabbfebef85845f3cbc1";
 
     // URL codificada en Base64 para no exponer el enlace directo en texto plano
     const URL_ENCODED = "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J3cWl3ekZLTWJ1eGxKVDdxZVAtR0Y0RlNCTzNWTVJUQTB0SHJVRVZKZEkxbHV3TV9XanQ2RUVTelU5Rzc0VU1PYzB3Zy9leGVj";
@@ -136,7 +135,6 @@
       frame.classList.remove("hidden");
     }
 
-    // Verificar si este dispositivo ya fue desbloqueado previamente
     if (localStorage.getItem(STORAGE_KEY) === PIN_HASH_ESPERADO) {
       cargarAplicacion();
     }
