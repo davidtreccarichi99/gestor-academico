@@ -10,25 +10,153 @@
   <meta name="apple-mobile-web-app-title" content="Académico">
   <meta name="mobile-web-app-capable" content="yes">
 
-  <!-- Ícono del Calendario + Birrete Universitario -->
   <link rel="icon" type="image/svg+xml" href="./icono.svg">
   <link rel="apple-touch-icon" href="./icono.svg">
 
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background-color: #f5f9f4; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background-color: #f5f9f4; color: #1b2a19; }
     iframe { width: 100%; height: 100%; border: none; display: block; }
+
+    /* Pantalla de bloqueo PIN */
+    #lockScreen {
+      position: fixed;
+      inset: 0;
+      background: #f5f9f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      z-index: 9999;
+    }
+
+    .lock-card {
+      background: #ffffff;
+      border: 1px solid #dce8d9;
+      border-top: 5px solid #A9D39E;
+      border-radius: 14px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 340px;
+      text-align: center;
+      box-shadow: 0 10px 25px -5px rgba(20, 51, 17, 0.08);
+    }
+
+    .lock-icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 12px;
+      display: block;
+    }
+
+    .lock-card h2 { font-size: 1.25rem; color: #143311; margin-bottom: 6px; }
+    .lock-card p { font-size: 0.88rem; color: #556952; margin-bottom: 18px; }
+
+    #pinInput {
+      width: 100%;
+      padding: 12px;
+      font-size: 1.4rem;
+      letter-spacing: 0.45em;
+      text-align: center;
+      border: 2px solid #dce8d9;
+      border-radius: 8px;
+      outline: none;
+      margin-bottom: 12px;
+      color: #143311;
+    }
+
+    #pinInput:focus { border-color: #2f5e28; }
+
+    .btn-unlock {
+      width: 100%;
+      padding: 12px;
+      background: #A9D39E;
+      color: #143311;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-unlock:hover { background: #94c487; }
+
+    #pinError {
+      color: #dc2626;
+      font-size: 0.82rem;
+      margin-top: 10px;
+      min-height: 18px;
+      font-weight: 600;
+    }
+
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <iframe id="appFrame" allow="clipboard-read; clipboard-write"></iframe>
+
+  <!-- Pantalla de acceso -->
+  <div id="lockScreen">
+    <div class="lock-card">
+      <img src="./icono.svg" alt="Logo" class="lock-icon">
+      <h2>Gestor Académico</h2>
+      <p>Ingresa tu PIN para acceder al panel</p>
+      <form id="pinForm">
+        <input type="password" id="pinInput" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••" autocomplete="off" required>
+        <button type="submit" class="btn-unlock">Desbloquear</button>
+      </form>
+      <div id="pinError"></div>
+    </div>
+  </div>
+
+  <!-- Contenedor de la App -->
+  <iframe id="appFrame" class="hidden" allow="clipboard-read; clipboard-write"></iframe>
 
   <script>
-    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwqiwzFKMbuxlJT7qeP-GF4FSBO3VMRTA0tHrUEVJdI1luwM_Wjt6EESzU9G74UMOc0wg/exec";
+    // PIN por defecto: "1234" (en SHA-256 para que no se lea en el código fuente)
+    const PIN_HASH_ESPERADO = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
 
-    const params = window.location.search;
-    document.getElementById('appFrame').src = URL_APPS_SCRIPT + params;
+    // URL codificada en Base64 para no exponer el enlace directo en texto plano
+    const URL_ENCODED = "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J3cWl3ekZLTWJ1eGxKVDdxZVAtR0Y0RlNCTzNWTVJUQTB0SHJVRVZKZEkxbHV3TV9XanQ2RUVTelU5Rzc0VU1PYzB3Zy9leGVj";
+
+    const STORAGE_KEY = "gestor_academico_auth_v1";
+
+    async function calcularSHA256(texto) {
+      const msgBuffer = new TextEncoder().encode(texto);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function cargarAplicacion() {
+      document.getElementById("lockScreen").classList.add("hidden");
+      const frame = document.getElementById("appFrame");
+      const urlBase = atob(URL_ENCODED);
+      const params = window.location.search;
+      frame.src = urlBase + params;
+      frame.classList.remove("hidden");
+    }
+
+    // Verificar si este dispositivo ya fue desbloqueado previamente
+    if (localStorage.getItem(STORAGE_KEY) === PIN_HASH_ESPERADO) {
+      cargarAplicacion();
+    }
+
+    document.getElementById("pinForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const pinIngresado = document.getElementById("pinInput").value.trim();
+      const errorDiv = document.getElementById("pinError");
+      errorDiv.textContent = "";
+
+      const hashIngresado = await calcularSHA256(pinIngresado);
+      if (hashIngresado === PIN_HASH_ESPERADO) {
+        localStorage.setItem(STORAGE_KEY, hashIngresado);
+        cargarAplicacion();
+      } else {
+        errorDiv.textContent = "PIN incorrecto. Intenta nuevamente.";
+        document.getElementById("pinInput").value = "";
+        document.getElementById("pinInput").focus();
+      }
+    });
   </script>
 </body>
 </html>
-
